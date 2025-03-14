@@ -22,11 +22,7 @@ Veja o aplicativo em ação no vídeo abaixo:
 ## Pré-requisitos
 
 Antes de começar, certifique-se de ter:
-- **Node.js** instalado (versão 16 ou superior recomendada).
-- **Expo CLI** instalado globalmente:
-  ```bash
-  npm install -g expo-cli
-  ```
+- Node.js instalado (versão 22 ou superior recomendada).
 - Um editor de código (ex.: VS Code).
 - Um dispositivo ou emulador para testar (Expo Go no celular ou emulador Android/iOS).
 
@@ -95,7 +91,7 @@ npx expo install @react-native-community/slider
 ## Passo 3: Configurando o Projeto
 
 ### 3.1. Atualizar o `app.json`
-Adicione configurações básicas ao `app.json`:
+Adicione configurações básicas ao `app.json`. Você precisa adicionar o `scheme`, `extra` e `plugins`:
 ```json
 {
   "expo": {
