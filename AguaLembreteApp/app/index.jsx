@@ -3,57 +3,87 @@ import { StyleSheet, View, Text } from "react-native";
 import { useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import AguaContador from "../components/agua_contador";
-import { setupNotifications, updateNotifications } from "../utils/notifications";
+import { setupNotifications, updateNotifications, carregar } from "../utils/notifications";
 import { useTheme } from "../utils/ThemeContext";
 
-const HISTORICO_AGUA = "waterHistory"; // Mesma chave usada no componente AguaContador
+const HISTORICO_AGUA = "waterHistory";
+const SETTINGS_PATH = "beberagua:notificationSettings"; // Updated to match settings/index.jsx
 
 export default function HomeScreen() {
     const { theme } = useTheme();
     const [copos, setCopos] = useState(0);
-  
+    const [dailyGoal, setDailyGoal] = useState(8);
+    const [userName, setUserName] = useState(""); // Add this state
+
+    const loadSettings = async () => {
+      try {
+        const savedSettings = await AsyncStorage.getItem(SETTINGS_PATH);
+        if (savedSettings) {
+          const parsed = JSON.parse(savedSettings);
+          if (parsed.dailyGoal) {
+            setDailyGoal(parsed.dailyGoal);
+          }
+          if (parsed.userName) { // Add this
+            setUserName(parsed.userName);
+          }
+        }
+      } catch (e) {
+        console.error("Erro ao carregar configurações:", e);
+      }
+    };
+
     useEffect(() => {
       const initialize = async () => {
+        await loadSettings();
         await setupNotifications();
-        await carregar();
         await updateNotifications();
       };
       initialize();
     }, []);
-  
+
     useFocusEffect(
       useCallback(() => {
         const recarregarAoVoltar = async () => {
-          await carregar();
+          await loadSettings();
         };
         recarregarAoVoltar();
       }, [])
     );
-  
-    // Carregar histórico de consumo de água hoje e atualizar o contador
-    const carregar = async () => {
-      try {
-        const historico_salvo = await AsyncStorage.getItem(HISTORICO_AGUA);
-        const historico_parsed = historico_salvo ? JSON.parse(historico_salvo) : [];
-        const dtAtual = new Date().toLocaleDateString("pt-BR");
-        const coposHoje = historico_parsed.find(entry => entry.date === dtAtual);
-        setCopos(coposHoje ? coposHoje.count : 0);
-      } catch (e) {
-        console.error("Erro ao carregar contagem do dia:", e);
-      }
-    };
-  
+
     return (
       <View style={[styles.container, { backgroundColor: theme.background }]}>
+        <Text style={[styles.welcomeText, { color: theme.primaryDark }]}>
+          {userName 
+            ? `Olá, ${userName}! Vamos nos hidratar hoje?` 
+            : "Vamos nos hidratar hoje?"}
+        </Text>
+        
         <Text style={[styles.title, { color: theme.primaryDark }]}>
           Lembrete de Água
         </Text>
+        
         <AguaContador copos={copos} setCopos={setCopos} />
+        <View style={[styles.progressContainer, { backgroundColor: theme.cardBackground }]}>
+          <Text style={[styles.progressText, { color: theme.secondaryText }]}>
+            Progresso: {copos}/{dailyGoal} copos
+          </Text>
+          <View style={styles.progressBarContainer}>
+            <View 
+              style={[
+                styles.progressBar, 
+                { 
+                  backgroundColor: theme.primary,
+                  width: `${Math.min((copos / dailyGoal) * 100, 100)}%`
+                }
+              ]} 
+            />
+          </View>
+        </View>
       </View>
     );
-  }
+}
 
-  const styles = StyleSheet.create({
+const styles = StyleSheet.create({
     container: {
       flex: 1,
       padding: 15,
@@ -65,5 +95,32 @@ export default function HomeScreen() {
       textAlign: "center",
       marginTop: 10,
       marginBottom: 20,
+    },
+    progressContainer: {
+      padding: 15,
+      borderRadius: 10,
+      marginTop: 20,
+    },
+    progressText: {
+      fontSize: 16,
+      textAlign: "center",
+      marginBottom: 10,
+    },
+    progressBarContainer: {
+      height: 10,
+      backgroundColor: '#E0E0E0',
+      borderRadius: 5,
+      overflow: 'hidden',
+    },
+    progressBar: {
+      height: '100%',
+      borderRadius: 5,
+    },
+    welcomeText: {
+      fontSize: 24,
+      fontWeight: "500",
+      textAlign: "center",
+      marginVertical: 10,
+      paddingHorizontal: 20,
     },
   });

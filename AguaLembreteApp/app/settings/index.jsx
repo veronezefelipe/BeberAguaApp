@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { StyleSheet, View, Text, Switch, ActivityIndicator } from "react-native";
+import { StyleSheet, View, Text, Switch, ActivityIndicator, TextInput } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { updateNotifications } from "../../utils/notifications";
 import Slider from "@react-native-community/slider";
@@ -16,7 +16,9 @@ export default function SettingsScreen() {
     const [isLoading, setIsLoading] = useState(true);
     const { theme, setTheme } = useTheme();
     const [isDarkMode, setIsDarkMode] = useState(theme === themes.dark);
-  
+    const [dailyGoal, setDailyGoal] = useState(8);
+    const [userName, setUserName] = useState("");
+
     const toggleTheme = (value) => {
       setIsDarkMode(value);
       setTheme(value ? "dark" : "light");
@@ -30,23 +32,34 @@ export default function SettingsScreen() {
       if (!isLoading) {
         saveSettings();
       }
-    }, [isDarkMode, notificationsEnabled, interval]);
+    }, [isDarkMode, notificationsEnabled, interval, dailyGoal, userName]);
   
     const loadSettings = async () => {
       try {
         const savedSettings = await AsyncStorage.getItem(SETTINGS_PATH);
         if (savedSettings) {
-          const { enabled, interval: savedInterval, theme: savedTheme } = JSON.parse(savedSettings);
+          const { 
+            enabled, 
+            interval: savedInterval, 
+            theme: savedTheme, 
+            dailyGoal: savedGoal,
+            userName: savedName
+          } = JSON.parse(savedSettings);
+          
           setNotificationsEnabled(enabled);
           setInterval(parseFloat(savedInterval) || 1);
           setIsDarkMode(savedTheme === "dark");
+          setDailyGoal(savedGoal || 8);
+          setUserName(savedName || "");
           if (savedTheme) setTheme(savedTheme);
         } else {
           setInterval(1);
+          setDailyGoal(8);
         }
       } catch (e) {
         console.error("Erro ao carregar configurações:", e);
         setInterval(1);
+        setDailyGoal(8);
       } finally {
         setIsLoading(false);
       }
@@ -58,7 +71,10 @@ export default function SettingsScreen() {
           enabled: notificationsEnabled,
           interval: interval,
           theme: isDarkMode ? "dark" : "light",
+          dailyGoal: dailyGoal,
+          userName: userName
         };
+        console.log("Saving settings:", settings); // Add this log
         await AsyncStorage.setItem(SETTINGS_PATH, JSON.stringify(settings));
         await updateNotifications();
       } catch (e) {
@@ -77,6 +93,25 @@ export default function SettingsScreen() {
     return (
         <View style={[styles.container, { backgroundColor: theme.background }]}>
           <View style={[styles.card, { backgroundColor: theme.cardBackground }]}>
+            <View style={styles.setting}>
+              <Text style={[styles.label, { color: theme.secondaryText }]}>
+                Seu Nome
+              </Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  {
+                    color: theme.secondaryText,
+                    borderColor: theme.primary,
+                    backgroundColor: theme.background
+                  }
+                ]}
+                value={userName}
+                onChangeText={setUserName}
+                placeholder="Digite seu nome"
+                placeholderTextColor={theme.secondaryText + "80"}
+              />
+            </View>
             <View style={styles.setting}>
               <Text style={[styles.label, { color: theme.secondaryText }]}>
                 Modo Escuro
@@ -99,6 +134,7 @@ export default function SettingsScreen() {
                 thumbColor={notificationsEnabled ? theme.primaryDark : "#f4f3f4"}
               />
             </View>
+            
             <View style={styles.sliderContainer}>
               <Text style={[styles.label, { color: theme.secondaryText }]}>
                 Intervalo: {interval?.toFixed(2)} hora(s)
@@ -110,6 +146,23 @@ export default function SettingsScreen() {
                 step={INTERVAL_STEP}
                 value={interval}
                 onValueChange={setInterval}
+                minimumTrackTintColor={theme.primary}
+                maximumTrackTintColor={theme.secondaryText}
+                thumbTintColor={theme.primaryDark}
+              />
+            </View>
+
+            <View style={styles.sliderContainer}>
+              <Text style={[styles.label, { color: theme.secondaryText }]}>
+                Meta Diária: {dailyGoal} copo(s)
+              </Text>
+              <Slider
+                style={styles.slider}
+                minimumValue={1}
+                maximumValue={20}
+                step={1}
+                value={dailyGoal}
+                onValueChange={setDailyGoal}
                 minimumTrackTintColor={theme.primary}
                 maximumTrackTintColor={theme.secondaryText}
                 thumbTintColor={theme.primaryDark}
@@ -155,5 +208,13 @@ export default function SettingsScreen() {
           flex: 1,
           justifyContent: "center",
           alignItems: "center",
+        },
+        input: {
+          borderWidth: 1,
+          borderRadius: 8,
+          padding: 10,
+          marginTop: 5,
+          width: '50%',
+          fontSize: 16,
         },
       });
